@@ -16,4 +16,6 @@ venv.bak/
 # Project specific
 *config.yml
 engines/
+*engines/
+
 
