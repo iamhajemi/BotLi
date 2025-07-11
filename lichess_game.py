@@ -516,6 +516,9 @@ class Lichess_Game:
             self.out_of_chessdb_counter += 1
             return
 
+        if len(response['moves']) < 5 <= self.board.legal_moves.count():
+            asyncio.create_task(self.api.queue_chessdb(fen))
+
         self.out_of_chessdb_counter = 0
         if self.config.online_moves.chessdb.selection == 'optimal' or response['moves'][0]['rank'] == 0:
             candidate_moves = [chessdb_move for chessdb_move in response['moves']
@@ -884,7 +887,8 @@ class Lichess_Game:
 
         if self.config.online_moves.lichess_cloud.enabled:
             if not self.config.online_moves.lichess_cloud.only_without_book or not self.book_settings.readers:
-                opening_sources[self._make_cloud_move] = self.config.online_moves.lichess_cloud.priority
+                if self.board.uci_variant == 'chess' or self.config.online_moves.lichess_cloud.use_for_variants:
+                    opening_sources[self._make_cloud_move] = self.config.online_moves.lichess_cloud.priority
 
         if self.config.online_moves.chessdb.enabled:
             if not self.config.online_moves.chessdb.only_without_book or not self.book_settings.readers:
