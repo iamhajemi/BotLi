@@ -176,6 +176,13 @@ class Game_Information:
     def tc_str(self) -> str:
         initial_time_min = self.initial_time_ms / 60_000
         if initial_time_min.is_integer():
+            initial_time_min = int(initial_time_min)
+        return f'{initial_time_min}+{self.increment_ms // 1000}'
+
+    @property
+    def tc_format(self) -> str:
+        initial_time_min = self.initial_time_ms / 60_000
+        if initial_time_min.is_integer():
             initial_time_str = str(int(initial_time_min))
         elif initial_time_min == 0.25:
             initial_time_str = '¼'
@@ -321,7 +328,6 @@ class Tournament:
     start_time: datetime
     end_time: datetime
     name: str
-    initial_time: int
     bots_allowed: bool
     team: str | None = None
     password: str | None = None
@@ -334,7 +340,6 @@ class Tournament:
                    start_time := datetime.fromisoformat(tournament_info['startsAt']),
                    start_time + timedelta(minutes=tournament_info['minutes']),
                    tournament_info.get('fullName', ''),
-                   tournament_info['clock']['limit'],
                    tournament_info.get('botsAllowed', False))
 
     @property
@@ -343,7 +348,7 @@ class Tournament:
 
     @property
     def seconds_to_finish(self) -> float:
-        return (self.end_time - datetime.now(UTC)).total_seconds() - max(30.0, min(self.initial_time / 2, 120.0))
+        return (self.end_time - datetime.now(UTC)).total_seconds()
 
     def cancel(self) -> None:
         if self.start_task:

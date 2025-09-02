@@ -116,7 +116,7 @@ class User_Interface:
 
     async def _test_engines(self) -> None:
         for engine_name, engine_config in self.config.engines.items():
-            print(f'Testing engine "{engine_name}" ... ', end='')
+            print(f'Testing engine "{engine_name}" ... ', end='', flush=True)
             await Engine.test(engine_config)
             print('OK')
 
@@ -145,7 +145,7 @@ class User_Interface:
                 self._reset(command)
             case 'stop' | 's':
                 self._stop()
-            case 'tournament':
+            case 'tournament' | 't':
                 self._tournament(command)
             case 'whitelist':
                 self._whitelist(command)

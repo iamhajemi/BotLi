@@ -15,10 +15,12 @@ class Game:
         self.username = username
         self.game_id = game_id
 
+        self.takeback_count = 0
         self.was_aborted = False
         self.ejected_tournament: str | None = None
 
         self.move_task: asyncio.Task[None] | None = None
+        self.abortion_task: asyncio.Task[None] | None = None
 
     async def run(self) -> None:
         game_stream_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -42,14 +44,16 @@ class Game:
         else:
             await lichess_game.start_pondering()
 
-        opponent_title = info.black_title if lichess_game.is_white else info.white_title
-        abortion_seconds = 30 if opponent_title == 'BOT' else 60
-        abortion_task = asyncio.create_task(self._abortion_task(lichess_game, chatter, abortion_seconds))
+        opponent_is_bot = info.white_title == 'BOT' and info.black_title == 'BOT'
+        max_takebacks = 0 if opponent_is_bot else self.config.challenge.max_takebacks
+        if info.tournament_id is None:
+            abortion_seconds = 30 if opponent_is_bot else 60
+            self.abortion_task = asyncio.create_task(self._abortion_task(lichess_game, chatter, abortion_seconds))
 
         while event := await game_stream_queue.get():
             match event['type']:
                 case 'chatLine':
-                    await chatter.handle_chat_message(event)
+                    await chatter.handle_chat_message(event, self.takeback_count, max_takebacks)
                     continue
                 case 'opponentGone':
                     if event.get('claimWinInSeconds') == 0:
@@ -58,7 +62,20 @@ class Game:
                 case 'gameFull':
                     event = event['state']
 
-            lichess_game.update(event)
+            if event.get('wtakeback') or event.get('btakeback'):
+                if self.takeback_count >= max_takebacks:
+                    await self.api.handle_takeback(self.game_id, False)
+                    continue
+
+                if await self.api.handle_takeback(self.game_id, True):
+                    if self.move_task:
+                        self.move_task.cancel()
+                        self.move_task = None
+                    await lichess_game.takeback()
+                    self.takeback_count += 1
+                continue
+
+            has_updated = lichess_game.update(event)
 
             if event['status'] != 'started':
                 if self.move_task:
@@ -68,10 +85,11 @@ class Game:
                 await chatter.send_goodbyes()
                 break
 
-            if lichess_game.is_our_turn and not lichess_game.board.is_repetition():
+            if has_updated:
                 self.move_task = asyncio.create_task(self._make_move(lichess_game, chatter))
 
-        abortion_task.cancel()
+        if self.abortion_task:
+            self.abortion_task.cancel()
         await lichess_game.close()
 
     async def _make_move(self, lichess_game: Lichess_Game, chatter: Chatter) -> None:
@@ -91,9 +109,11 @@ class Game:
             await self.api.abort_game(self.game_id)
             await chatter.send_abortion_message()
 
+        self.abortion_task = None
+
     def _print_game_information(self, info: Game_Information) -> None:
         opponents_str = f'{info.white_str}   -   {info.black_str}'
-        message = (5 * ' ').join([info.id_str, opponents_str, info.tc_str,
+        message = (5 * ' ').join([info.id_str, opponents_str, info.tc_format,
                                   info.rated_str, info.variant_str])
 
         print(f'\n{message}\n{128 * "‾"}')
@@ -150,6 +170,8 @@ class Game:
                 case 'outoftime':
                     out_of_time_player = info.black_name if game_state['wtime'] else info.white_name
                     message = f'Game drawn. {out_of_time_player} ran out of time.'
+                case 'insufficientMaterialClaim':
+                    message = 'Game drawn due to insufficient material claim.'
                 case _:
                     self.was_aborted = True
                     message = 'Game aborted.'

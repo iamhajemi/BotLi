@@ -7,7 +7,7 @@ engines:
     ponder: true                          # Think on opponent's time.
     silence_stderr: false                 # Suppresses stderr output.
     move_overhead_multiplier: 1.0         # Increase if your bot flags games too often. Default move overhead is 1 second per 1 minute initital time.
-    uci_options:                          # Arbitrary UCI options passed to the engine. (Commenting allowed)
+    uci_options:                          # Arbitrary UCI options passed to the engine.
       Threads: 4                          # Max CPU threads the engine can use.
       Hash: 256                           # Max memory (in megabytes) the engine can allocate.
       Move Overhead: 100                  # Increase if your bot flags games too often.
@@ -21,7 +21,7 @@ engines:
 #   ponder: true                          # Think on opponent's time.
 #   silence_stderr: false                 # Suppresses stderr output.
 #   move_overhead_multiplier: 1.0         # Increase if your bot flags games too often. Default move overhead is 1 second per 1 minute initital time.
-#   uci_options:                          # Arbitrary UCI options passed to the engine. (Commenting allowed)
+#   uci_options:                          # Arbitrary UCI options passed to the engine.
 #     Threads: 4                          # Max CPU threads the engine can use.
 #     Hash: 256                           # Max memory (in megabytes) the engine can allocate.
 #     Move Overhead: 100                  # Increase if your bot flags games too often.
@@ -29,10 +29,9 @@ engines:
 #     time: 5.0                           # Max time per move in seconds.
 #     depth: 26                           # Max depth per move.
 #     nodes: 4000000                      # Max nodes per move.
-# Use the same pattern for 'bullet', 'blitz', 'rapid', 'classical',
-# 'antichess', 'atomic', 'chess960', 'crazyhouse', 'horde', 'kingofthehill', 'racingkings', '3check'
-# and 'humans' as well.
-# Append '_white' or '_black' to use the engine only as the specific color.
+# Use the same pattern for 'bullet', 'blitz', 'rapid', 'classical', time controls in initial_minutes+increment_seconds format,
+# 'antichess', 'atomic', 'chess960', 'crazyhouse', 'horde', 'kingofthehill', 'racingkings' and '3check' as well.
+# Append '_white', '_black', '_human' and/or '_tournament' to use the engine only as the specific color, against humans or in tournaments.
 
 syzygy:
   standard:
@@ -78,15 +77,15 @@ opening_books:
 #     max_depth: 16                       # Half move max depth. (Comment this line for max depth)
       names:                              # List of names of books to use if there is no specific book for the time control, white, black or chess960.
         - DefaultBook
-#   Use the same pattern for 'bullet', 'blitz', 'rapid', 'classical',
-#   'antichess', 'atomic', 'chess960', 'crazyhouse', 'horde', 'kingofthehill', 'racingkings', '3check'
-#   and 'humans' as well.
-#   Append '_white' or '_black' to use the books only as the specific color.
+#   Use the same pattern for 'bullet', 'blitz', 'rapid', 'classical', time controls in initial_minutes+increment_seconds format,
+#   'antichess', 'atomic', 'chess960', 'crazyhouse', 'horde', 'kingofthehill', 'racingkings' and '3check' as well.
+#   Append '_white', '_black', '_human' and/or '_tournament' to use the book only as the specific color, against humans or in tournaments.
 
 online_moves:
   opening_explorer:
     enabled: false                        # Activate online moves from Lichess opening explorer. The move that has performed best for this bot is played.
     priority: 300                         # Priority with which this move source is used. Higher priority is used first.
+#   player: Username                      # Player whose Lichess opening explorer should be used. Comment this to use your own or with anti your opponent's.
     only_without_book: false              # Whether the Lichess opening explorer should only be used if there is no matching book.
     use_for_variants: false               # Whether the Lichess opening explorer should be used for other variants than standard and chess960.
     min_time: 10                          # Time the bot must have at least to use the online move. +10 seconds in games without increment.
@@ -128,15 +127,18 @@ offer_draw:
   consecutive_moves: 10                   # How many moves in a row the absolute value of the score has to be below the draw value
   min_game_length: 35                     # Earliest move in which draw is offered.
   against_humans: true                    # Activate whether these settings should apply against humans.
+# min_rating: 2300                        # Minimum rating of opponent to offer draw.
 
 resign:
   enabled: false                          # Activate whether the bot should resign games.
   score: -1000                            # If the score is less than or equal to this value, the bot resigns (in cp).
   consecutive_moves: 5                    # How many moves in a row the score has to be below the resign value.
   against_humans: true                    # Activate whether these settings should apply against humans.
+# min_rating: 2300                        # Minimum rating of opponent to resign.
 
-challenge:                                # Incoming challenges. (Commenting allowed)
+challenge:                                # Incoming challenges.
   concurrency: 1                          # Number of games to play simultaneously.
+  max_takebacks: 3                        # Maximum number of takebacks granted to a human.
   bullet_with_increment_only: false       # Whether bullet games against BOTs should only be accepted with increment.
 # min_increment: 0                        # Minimum amount of increment to accept a challenge.
 # max_increment: 180                      # Maximum amount of increment to accept a challenge.
@@ -198,13 +200,13 @@ messages:
   greeting_spectators: "Hey, I'm running {engine}. Type !help for a list of commands." # Message sent to the spectators at the beginning of a game.
   goodbye_spectators: "Thanks for watching."                                           # Message sent to the spectators after the end of a game.
 
-# whitelist:                              # List of users whose challenges are always accepted.
-#   - Username1
-#   - Username2
+whitelist:                                # List of users whose challenges are always accepted.
+# - Username1
+# - Username2
 
-# blacklist:                              # List of users who are not challenged and whose challenges are declined.
-#   - Username1
-#   - Username2
+blacklist:                                # List of users who are not challenged and whose challenges are declined.
+# - Username1
+# - Username2
 
 books:                                    # Names of the opening books (to be used above in the opening_books section) and paths to the opening books.
   DefaultBook: "/path/to/DefaultBook.bin"
