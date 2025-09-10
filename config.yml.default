@@ -31,7 +31,8 @@ engines:
 #     nodes: 4000000                      # Max nodes per move.
 # Use the same pattern for 'bullet', 'blitz', 'rapid', 'classical', time controls in initial_minutes+increment_seconds format,
 # 'antichess', 'atomic', 'chess960', 'crazyhouse', 'horde', 'kingofthehill', 'racingkings' and '3check' as well.
-# Append '_white', '_black', '_human' and/or '_tournament' to use the engine only as the specific color, against humans or in tournaments.
+# Append '_white', '_black', '_human', '_bot', '_rated', '_casual' and/or '_tournament'
+# to use the engine only as the specific color, against humans / bots, in rated / casual games or in tournaments.
 
 syzygy:
   standard:
@@ -75,11 +76,13 @@ opening_books:
     standard:
       selection: weighted_random          # Move selection is one of "weighted_random", "uniform_random" or "best_move".
 #     max_depth: 16                       # Half move max depth. (Comment this line for max depth)
+#     allow_repetitions: false            # Whether the book can create repetitions on the board. Can lead to unintentional draws.
       names:                              # List of names of books to use if there is no specific book for the time control, white, black or chess960.
         - DefaultBook
 #   Use the same pattern for 'bullet', 'blitz', 'rapid', 'classical', time controls in initial_minutes+increment_seconds format,
 #   'antichess', 'atomic', 'chess960', 'crazyhouse', 'horde', 'kingofthehill', 'racingkings' and '3check' as well.
-#   Append '_white', '_black', '_human' and/or '_tournament' to use the book only as the specific color, against humans or in tournaments.
+#   Append '_white', '_black', '_human', '_bot', '_rated', '_casual' and/or '_tournament'
+#   to use the book only as the specific color, against humans / bots, in rated / casual games or in tournaments.
 
 online_moves:
   opening_explorer:
@@ -88,6 +91,7 @@ online_moves:
 #   player: Username                      # Player whose Lichess opening explorer should be used. Comment this to use your own or with anti your opponent's.
     only_without_book: false              # Whether the Lichess opening explorer should only be used if there is no matching book.
     use_for_variants: false               # Whether the Lichess opening explorer should be used for other variants than standard and chess960.
+    allow_repetitions: false              # Whether the Lichess opening explorer can create repetitions on the board. Can lead to unintentional draws.
     min_time: 10                          # Time the bot must have at least to use the online move. +10 seconds in games without increment.
     timeout: 5                            # Time the server has to respond.
     min_games: 5                          # Minimum number of games in which the position must have occurred.
@@ -101,6 +105,8 @@ online_moves:
     priority: 200                         # Priority with which this move source is used. Higher priority is used first.
     only_without_book: false              # Whether the cloud should only be used if there is no matching book.
     use_for_variants: false               # Whether the cloud should be used for other variants than standard and chess960.
+    allow_repetitions: false              # Whether the cloud can create repetitions on the board. Can lead to unintentional draws.
+    trust_eval: false                     # Whether the cloud eval should be trusted for draw offers and resignations.
     min_eval_depth: 10                    # Minimum evaluation depth.
     min_time: 10                          # Time the bot must have at least to use the online move. +10 seconds in games without increment.
     timeout: 5                            # Time the server has to respond.
@@ -110,6 +116,8 @@ online_moves:
     enabled: false                        # Activate online moves from https://chessdb.cn/queryc_en/
     priority: 100                         # Priority with which this move source is used. Higher priority is used first.
     only_without_book: false              # Whether the chessdb should only be used if there is no matching book.
+    allow_repetitions: false              # Whether the chessdb can create repetitions on the board. Can lead to unintentional draws.
+    trust_eval: false                     # Whether the chessdb eval should be trusted for draw offers and resignations.
     min_candidates: 1                     # Minimum number of candidate moves.
     min_time: 10                          # Time the bot must have at least to use the online move. +10 seconds in games without increment.
     timeout: 5                            # Time the server has to respond.
@@ -124,8 +132,8 @@ online_moves:
 offer_draw:
   enabled: true                           # Activate whether the bot should offer draw.
   score: 10                               # If the absolute value of the score is less than or equal to this value, the bot offers/accepts draw (in cp)
-  consecutive_moves: 10                   # How many moves in a row the absolute value of the score has to be below the draw value
-  min_game_length: 35                     # Earliest move in which draw is offered.
+  consecutive_moves: 5                    # How many moves in a row the absolute value of the score has to be below the draw value
+  min_game_length: 30                     # Earliest move in which draw is offered.
   against_humans: true                    # Activate whether these settings should apply against humans.
 # min_rating: 2300                        # Minimum rating of opponent to offer draw.
 
