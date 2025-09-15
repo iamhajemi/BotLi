@@ -35,14 +35,11 @@ class API:
                                                                           'User-Agent': f'BotLi/{config.version}'},
                                                      timeout=aiohttp.ClientTimeout(total=5.0))
         self.external_session = aiohttp.ClientSession(headers={'User-Agent': f'BotLi/{config.version}'})
-        self.chessdb_queue: asyncio.Queue[str] = asyncio.Queue()
-        self._chessdb_worker_task: asyncio.Task[None] = asyncio.create_task(self._chessdb_worker())
 
     async def __aenter__(self) -> 'API':
         return self
 
     async def __aexit__(self, *_) -> None:
-        self._chessdb_worker_task.cancel()
         await self.close()
 
     def append_user_agent(self, username: str) -> None:
@@ -52,16 +49,6 @@ class API:
     async def close(self) -> None:
         await self.lichess_session.close()
         await self.external_session.close()
-
-    async def _chessdb_worker(self) -> None:
-        while fen := await self.chessdb_queue.get():
-            try:
-                async with self.external_session.get('http://www.chessdb.cn/cdb.php',
-                                                     params={'action': 'queue', 'board': fen},
-                                                     timeout=aiohttp.ClientTimeout(total=5.0)):
-                    await asyncio.sleep(1.0)
-            except aiohttp.ClientError as e:
-                print(f'ChessDB Queue: {e}')
 
     @retry(**BASIC_RETRY_CONDITIONS)
     async def abort_game(self, game_id: str) -> bool:
@@ -152,18 +139,17 @@ class API:
     async def get_account(self) -> dict[str, Any]:
         async with self.lichess_session.get('/api/account') as response:
             json_response = await response.json()
-
             if 'error' in json_response:
                 raise RuntimeError(f'Account error: {json_response["error"]}')
-
             return json_response
 
-    async def get_chessdb_eval(self, fen: str, timeout: int) -> dict[str, Any] | None:
+    async def get_chessdb_eval(self, fen: str, best_move: bool, timeout: int) -> dict[str, Any] | None:
         try:
             async with self.external_session.get('http://www.chessdb.cn/cdb.php',
-                                                 params={'action': 'queryall',
+                                                 params={'action': 'querypv',
                                                          'board': fen,
-                                                         'json': 1},
+                                                         'json': 1,
+                                                         'stable': int(best_move)},
                                                  timeout=aiohttp.ClientTimeout(total=timeout)) as response:
                 response.raise_for_status()
                 return await response.json()
@@ -314,6 +300,9 @@ class API:
             return False
 
     async def send_chat_message(self, game_id: str, room: str, text: str) -> bool:
+        if len(text) > 140:
+            print(f'Chat message "{text}" is too long: {len(text)}/140 characters.')
+            return False
         try:
             async with self.lichess_session.post(f'/api/bot/game/{game_id}/chat',
                                                  data={'room': room, 'text': text},
