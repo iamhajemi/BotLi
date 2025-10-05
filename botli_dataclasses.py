@@ -1,7 +1,13 @@
 from asyncio import Task
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+try:
+    from datetime import UTC
+except ImportError:
+    # Python 3.10 ve öncesi için fallback
+    from datetime import timezone
+    UTC = timezone.utc
 from typing import Any, Literal
 
 import chess

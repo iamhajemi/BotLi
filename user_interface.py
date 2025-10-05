@@ -3,8 +3,15 @@ import asyncio
 import logging
 import os
 import signal
+import subprocess
 import sys
-from enum import StrEnum
+try:
+    from enum import StrEnum
+except ImportError:
+    # Python 3.10 ve öncesi için fallback
+    from enum import Enum
+    class StrEnum(str, Enum):
+        pass
 from typing import TypeVar
 
 from api import API
@@ -42,7 +49,71 @@ EnumT = TypeVar("EnumT", bound=StrEnum)
 
 
 class User_Interface:
-    async def main(self, commands: list[str], config_path: str, allow_upgrade: bool) -> None:
+    def _check_and_update(self) -> bool:
+        """BotLi'yi GitHub'dan günceller"""
+        try:
+            print("BotLi güncellemeleri kontrol ediliyor...")
+            
+            # Git durumunu kontrol et
+            result = subprocess.run(['git', 'status', '--porcelain'], 
+                                  capture_output=True, text=True, cwd=os.getcwd())
+            
+            if result.returncode != 0:
+                print("Git repository bulunamadı. Manuel güncelleme gerekli.")
+                return False
+            
+            # Değişiklik varsa uyar
+            if result.stdout.strip():
+                print("WARNING: Yerel degisiklikler tespit edildi. Guncelleme atlaniyor.")
+                print("Guncellemek icin once degisikliklerinizi commit edin veya stash yapin.")
+                return False
+            
+            # Remote'dan güncellemeleri çek
+            print("GitHub'dan güncellemeler çekiliyor...")
+            fetch_result = subprocess.run(['git', 'fetch', 'origin'], 
+                                        capture_output=True, text=True, cwd=os.getcwd())
+            
+            if fetch_result.returncode != 0:
+                print("ERROR: Guncellemeler cekilemedi.")
+                return False
+            
+            # Yerel ve remote arasındaki farkı kontrol et
+            diff_result = subprocess.run(['git', 'rev-list', '--count', 'HEAD..origin/main'], 
+                                       capture_output=True, text=True, cwd=os.getcwd())
+            
+            if diff_result.returncode == 0 and diff_result.stdout.strip():
+                commits_behind = int(diff_result.stdout.strip())
+                if commits_behind > 0:
+                    print(f"UPDATE: {commits_behind} yeni commit bulundu. Guncelleniyor...")
+                    
+                    # Güncellemeyi uygula
+                    pull_result = subprocess.run(['git', 'pull', 'origin', 'main'], 
+                                               capture_output=True, text=True, cwd=os.getcwd())
+                    
+                    if pull_result.returncode == 0:
+                        print("SUCCESS: BotLi basariyla guncellendi!")
+                        print("RESTART: Bot yeniden baslatiliyor...")
+                        return True
+                    else:
+                        print(f"ERROR: Guncelleme basarisiz: {pull_result.stderr}")
+                        return False
+                else:
+                    print("OK: BotLi zaten guncel.")
+            else:
+                print("OK: BotLi zaten guncel.")
+                
+        except Exception as e:
+            print(f"ERROR: Guncelleme kontrolu sirasinda hata: {e}")
+        
+        return False
+
+    async def main(self, commands: list[str], config_path: str, allow_upgrade: bool, skip_update: bool = False) -> None:
+        # Güncelleme kontrolü yap (eğer atlanmamışsa)
+        if not skip_update and self._check_and_update():
+            # Güncelleme yapıldıysa yeniden başlat
+            print("BotLi güncellendi. Yeniden başlatılıyor...")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+            return
         self.config = Config.from_yaml(config_path)
         print(f"{LOGO} • {self.config.version}", end="", flush=True)
 
@@ -357,9 +428,10 @@ if __name__ == "__main__":
     parser.add_argument("--config", "-c", default="config.yml", help="Path to config.yml.")
     parser.add_argument("--upgrade", "-u", action="store_true", help="Upgrade account to BOT account.")
     parser.add_argument("--debug", "-d", action="store_true", help="Enable debug logging.")
+    parser.add_argument("--no-update", action="store_true", help="Skip automatic update check.")
     args = parser.parse_args()
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
 
-    asyncio.run(User_Interface().main(args.commands, args.config, args.upgrade), debug=args.debug)
+    asyncio.run(User_Interface().main(args.commands, args.config, args.upgrade, args.no_update), debug=args.debug)
