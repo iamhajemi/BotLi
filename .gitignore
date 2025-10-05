@@ -131,3 +131,10 @@ dmypy.json
 # Project specific
 *config.yml
 *matchmaking.json
+
+# Large engine files (too big for GitHub)
+engines/*.bin
+engines/stockfish*
+engines/3-4-5/
+config.bak
+config.yml.bak
